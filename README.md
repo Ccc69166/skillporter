@@ -1,3 +1,5 @@
+**[English](README_EN.md)** | **中文**
+
 # SkillPorter - 跨平台 Skill 转换工具
 
 在不同 AI 编程助手之间无缝迁移你的技能配置。支持 Claude Code、Cursor、Cline、Kimi Code Agent 等 10+ 平台。
