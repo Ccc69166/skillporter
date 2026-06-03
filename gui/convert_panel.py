@@ -155,12 +155,16 @@ class ConvertPanel(QWidget):
             QComboBox {{
                 border: 1.5px solid {COLORS["border"]};
                 border-radius: 6px;
-                padding: 6px 8px;
+                padding: 6px 4px;
                 background-color: {COLORS["bg_input"]};
                 color: {COLORS["text_primary"]};
             }}
             QComboBox:focus {{
                 border-color: {COLORS["border_focus"]};
+            }}
+            QComboBox::drop-down {{
+                width: 0px;
+                border: none;
             }}
             QComboBox QAbstractItemView {{
                 background-color: {COLORS["bg_primary"]};
