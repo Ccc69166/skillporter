@@ -1,21 +1,20 @@
 """
-Codex平台解析器 - 解析OpenAI Codex格式的Skill文件
+Hermes平台解析器 - 解析Hermes格式的Skill文件
 ================================================
 
-Codex的skill文件结构：
-- 位置: ~/.codex/skills/{skill-name}/
-- 主文件: AGENTS.md 或 openai.yaml
-- 格式: YAML配置 + Markdown指令
-- 变量: {{args}}, {{context}}等
-- 工具: 在openai.yaml中定义
+Hermes的skill文件结构：
+- 位置: ~/.hermes/skills/{skill-name}/ 或 hermes.yaml
+- 格式: YAML配置文件
+- 变量: 在YAML中定义
+- 工具: 在YAML中定义
 
-Codex skill特点：
-1. 使用openai.yaml作为配置文件
-2. AGENTS.md作为主要指令文件
-3. 支持parameters字段定义变量
-4. 工具权限在配置中定义
+Hermes skill特点：
+1. 使用YAML配置文件格式
+2. 支持多层级配置
+3. 支持子Agent委托
+4. 支持多种LLM提供商
 
-作者：Senior Developer (高级开发工程师)
+作者：Ccc
 版本：1.0.0
 """
 
@@ -24,29 +23,27 @@ from typing import List, Dict, Any, Optional, Union
 from pathlib import Path
 import yaml
 
-from ..core.parser import BaseParser
-from ..core.schema import UniversalSkill, SkillPlatform, Variable, ToolPermission, ResourceFile
+from skillporter.core.parser import BaseParser
+from skillporter.core.schema import UniversalSkill, SkillPlatform, Variable, ToolPermission, ResourceFile
 
 
-class CodexParser(BaseParser):
+class HermesParser(BaseParser):
     """
-    Codex Skill解析器
+    Hermes Skill解析器
     
-    解析OpenAI Codex格式的skill文件，转换为通用Skill格式。
+    解析Hermes格式的skill文件，转换为通用Skill格式。
     """
     
     @property
     def platform(self) -> SkillPlatform:
         """返回支持的平台类型"""
-        return SkillPlatform.CODEX
+        return SkillPlatform.HERMES
     
     def parse_file(self, file_path: Union[str, Path]) -> UniversalSkill:
         """
-        解析单个Codex skill文件
+        解析单个Hermes skill文件
         
-        Codex skill可以是：
-        1. openai.yaml（配置文件）
-        2. AGENTS.md（指令文件）
+        Hermes skill文件通常是YAML格式。
         
         Args:
             file_path: skill文件路径
@@ -56,29 +53,72 @@ class CodexParser(BaseParser):
         """
         path = Path(file_path)
         if not path.exists():
-            raise FileNotFoundError(f"Codex skill file not found: {file_path}")
+            raise FileNotFoundError(f"Hermes skill file not found: {file_path}")
         
-        # 根据文件类型选择解析方式
-        if path.name == "openai.yaml":
-            return self._parse_openai_yaml(path)
-        elif path.name == "AGENTS.md":
-            return self._parse_agents_md(path)
-        else:
-            # 尝试自动检测
-            content = self.read_file(path)
-            if "openai" in content.lower() or "parameters" in content:
-                return self._parse_openai_yaml(path)
-            else:
-                return self._parse_agents_md(path)
+        content = self.read_file(path)
+        
+        # 尝试解析YAML
+        try:
+            yaml_data = yaml.safe_load(content) or {}
+        except yaml.YAMLError as e:
+            raise ValueError(f"Invalid YAML in Hermes skill file: {e}")
+        
+        # 提取基础信息
+        skill_id = yaml_data.get("id", self.extract_id_from_path(path))
+        name = yaml_data.get("name", skill_id)
+        description = yaml_data.get("description", "")
+        
+        # 提取变量
+        variables = self._extract_variables_from_config(yaml_data)
+        
+        # 提取工具权限
+        allowed_tools = self._extract_tools_from_config(yaml_data)
+        
+        # 提取指令
+        instructions = yaml_data.get("instructions", yaml_data.get("prompt", ""))
+        
+        # 创建skill对象
+        skill = UniversalSkill(
+            id=skill_id,
+            name=name,
+            description=description,
+            description_zh=yaml_data.get("description_zh"),
+            description_en=yaml_data.get("description_en"),
+            version=yaml_data.get("version"),
+            author=yaml_data.get("author"),
+            tags=yaml_data.get("tags", []),
+            instructions=instructions,
+            allowed_tools=allowed_tools,
+            variables=variables,
+            source_platform=SkillPlatform.HERMES,
+            source_path=str(path)
+        )
+        
+        # 提取平台特有字段
+        platform_overrides = {}
+        for key, value in yaml_data.items():
+            if key not in ["id", "name", "description", "description_zh", "description_en",
+                          "version", "author", "tags", "instructions", "prompt", "parameters", "tools"]:
+                platform_overrides[key] = value
+        
+        if platform_overrides:
+            skill.set_platform_override(SkillPlatform.HERMES, platform_overrides)
+        
+        # 验证skill
+        if not self.validate_skill(skill):
+            errors = self.get_errors()
+            raise ValueError(f"Invalid Hermes skill: {'; '.join(errors)}")
+        
+        return skill
     
     def parse_directory(self, dir_path: Union[str, Path]) -> UniversalSkill:
         """
-        解析整个Codex skill目录
+        解析整个Hermes skill目录
         
-        Codex skill目录结构：
+        Hermes skill目录结构：
         {skill-name}/
-        ├── openai.yaml      # 配置文件（必需）
-        ├── AGENTS.md         # 指令文件（可选）
+        ├── hermes.yaml       # 主配置文件
+        ├── SKILL.md          # 指令文件（可选）
         ├── scripts/          # 脚本目录（可选）
         │   └── *.py, *.sh等
         └── references/       # 参考文档（可选）
@@ -92,26 +132,31 @@ class CodexParser(BaseParser):
         """
         path = Path(dir_path)
         if not path.exists():
-            raise FileNotFoundError(f"Codex skill directory not found: {dir_path}")
+            raise FileNotFoundError(f"Hermes skill directory not found: {dir_path}")
         
         # 查找配置文件
-        config_file = path / "openai.yaml"
+        config_file = path / "hermes.yaml"
         if not config_file.exists():
             # 尝试查找其他yaml文件
             yaml_files = list(path.glob("*.yaml")) + list(path.glob("*.yml"))
             if yaml_files:
                 config_file = yaml_files[0]
             else:
-                raise FileNotFoundError(f"No openai.yaml found in {dir_path}")
+                # 尝试查找SKILL.md
+                skill_file = path / "SKILL.md"
+                if skill_file.exists():
+                    return self._parse_skill_md(skill_file)
+                else:
+                    raise FileNotFoundError(f"No hermes.yaml or SKILL.md found in {dir_path}")
         
         # 解析配置文件
-        skill = self._parse_openai_yaml(config_file)
+        skill = self.parse_file(config_file)
         
         # 查找指令文件
-        agents_file = path / "AGENTS.md"
-        if agents_file.exists():
-            agents_content = self.read_file(agents_file)
-            _, instructions = self.parse_yaml_frontmatter(agents_content)
+        skill_file = path / "SKILL.md"
+        if skill_file.exists():
+            skill_content = self.read_file(skill_file)
+            _, instructions = self.parse_yaml_frontmatter(skill_content)
             skill.instructions = instructions
         
         # 收集资源文件
@@ -144,73 +189,12 @@ class CodexParser(BaseParser):
         
         return skill
     
-    def _parse_openai_yaml(self, file_path: Path) -> UniversalSkill:
+    def _parse_skill_md(self, file_path: Path) -> UniversalSkill:
         """
-        解析openai.yaml配置文件
+        解析SKILL.md文件
         
         Args:
-            file_path: openai.yaml文件路径
-            
-        Returns:
-            UniversalSkill: 解析后的通用skill对象
-        """
-        content = self.read_file(file_path)
-        config = yaml.safe_load(content) or {}
-        
-        # 提取基础信息
-        skill_id = config.get("id", self.extract_id_from_path(file_path.parent))
-        name = config.get("name", skill_id)
-        description = config.get("description", "")
-        
-        # 提取变量定义
-        variables = self._extract_variables_from_config(config)
-        
-        # 提取工具权限
-        allowed_tools = self._extract_tools_from_config(config)
-        
-        # 提取指令
-        instructions = config.get("instructions", "")
-        
-        # 创建skill对象
-        skill = UniversalSkill(
-            id=skill_id,
-            name=name,
-            description=description,
-            description_zh=config.get("description_zh"),
-            description_en=config.get("description_en"),
-            version=config.get("version"),
-            author=config.get("author"),
-            tags=config.get("tags", []),
-            instructions=instructions,
-            allowed_tools=allowed_tools,
-            variables=variables,
-            source_platform=SkillPlatform.CODEX,
-            source_path=str(file_path)
-        )
-        
-        # 提取平台特有字段
-        platform_overrides = {}
-        for key, value in config.items():
-            if key not in ["id", "name", "description", "description_zh", "description_en",
-                          "version", "author", "tags", "instructions", "parameters", "tools"]:
-                platform_overrides[key] = value
-        
-        if platform_overrides:
-            skill.set_platform_override(SkillPlatform.CODEX, platform_overrides)
-        
-        # 验证skill
-        if not self.validate_skill(skill):
-            errors = self.get_errors()
-            raise ValueError(f"Invalid Codex skill: {'; '.join(errors)}")
-        
-        return skill
-    
-    def _parse_agents_md(self, file_path: Path) -> UniversalSkill:
-        """
-        解析AGENTS.md指令文件
-        
-        Args:
-            file_path: AGENTS.md文件路径
+            file_path: SKILL.md文件路径
             
         Returns:
             UniversalSkill: 解析后的通用skill对象
@@ -242,7 +226,7 @@ class CodexParser(BaseParser):
             instructions=markdown_content,
             allowed_tools=allowed_tools,
             variables=variables,
-            source_platform=SkillPlatform.CODEX,
+            source_platform=SkillPlatform.HERMES,
             source_path=str(file_path)
         )
         
@@ -252,7 +236,7 @@ class CodexParser(BaseParser):
         """
         从内容中提取变量定义
         
-        Codex使用{{variable_name}}格式的变量。
+        Hermes支持多种变量格式。
         
         Args:
             content: 指令内容文本
@@ -262,16 +246,37 @@ class CodexParser(BaseParser):
         """
         variables = []
         
-        # 匹配Codex变量模式：{{variable_name}}
-        pattern = r'\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}'
-        matches = re.findall(pattern, content)
+        # 匹配$VARIABLE_NAME格式
+        pattern1 = r'\$([A-Z_]+)'
+        matches1 = re.findall(pattern1, content)
+        
+        # 匹配{{variable_name}}格式
+        pattern2 = r'\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}'
+        matches2 = re.findall(pattern2, content)
         
         # 去重并创建变量对象
         seen = set()
-        for var_name in matches:
+        
+        # 处理$格式变量
+        for var_name in matches1:
             if var_name not in seen:
                 seen.add(var_name)
+                placeholder = f"${var_name}"
+                required = var_name in ["ARGUMENTS"]
+                description = self._get_variable_description(var_name)
                 
+                variable = Variable(
+                    name=var_name.lower(),
+                    placeholder=placeholder,
+                    required=required,
+                    description=description
+                )
+                variables.append(variable)
+        
+        # 处理{{}}格式变量
+        for var_name in matches2:
+            if var_name not in seen:
+                seen.add(var_name)
                 placeholder = f"{{{{{var_name}}}}}"
                 required = var_name in ["args", "arguments"]
                 description = self._get_variable_description(var_name)
@@ -291,7 +296,7 @@ class CodexParser(BaseParser):
         从配置中提取变量定义
         
         Args:
-            config: openai.yaml配置数据
+            config: YAML配置数据
             
         Returns:
             List[Variable]: 提取的变量列表
@@ -304,7 +309,7 @@ class CodexParser(BaseParser):
             if isinstance(param_config, dict):
                 variable = Variable(
                     name=param_name,
-                    placeholder=f"{{{{{param_name}}}}}",
+                    placeholder=f"${param_name.upper()}",
                     required=param_config.get("required", False),
                     description=param_config.get("description"),
                     type=param_config.get("type", "string"),
@@ -314,7 +319,7 @@ class CodexParser(BaseParser):
                 # 简单格式
                 variable = Variable(
                     name=param_name,
-                    placeholder=f"{{{{{param_name}}}}}",
+                    placeholder=f"${param_name.upper()}",
                     required=False,
                     description=str(param_config)
                 )
@@ -349,7 +354,7 @@ class CodexParser(BaseParser):
                     tool = ToolPermission(
                         name=tool_config,
                         category=self._categorize_tool(tool_config),
-                        description=f"Codex tool: {tool_config}"
+                        description=f"Hermes tool: {tool_config}"
                     )
                 elif isinstance(tool_config, dict):
                     tool = ToolPermission(
@@ -366,7 +371,7 @@ class CodexParser(BaseParser):
         从配置中提取工具权限
         
         Args:
-            config: openai.yaml配置数据
+            config: YAML配置数据
             
         Returns:
             List[ToolPermission]: 提取的工具权限列表
@@ -376,6 +381,15 @@ class CodexParser(BaseParser):
     def _get_variable_description(self, var_name: str) -> str:
         """获取变量描述"""
         descriptions = {
+            # $格式变量
+            "ARGUMENTS": "User-provided arguments",
+            "CONTEXT": "Current context information",
+            "FILE_PATH": "Path to the current file",
+            "SELECTION": "Selected text in the editor",
+            "WORKSPACE": "Workspace root path",
+            "USER": "Current user information",
+            
+            # {{}}格式变量
             "args": "User-provided arguments",
             "arguments": "User-provided arguments",
             "context": "Current context information",
@@ -390,28 +404,30 @@ class CodexParser(BaseParser):
         """确定工具类别"""
         tool_categories = {
             # 文件操作
-            "read_file": "read",
-            "write_file": "write",
-            "edit_file": "write",
-            "list_files": "read",
-            "search_files": "read",
-            "search_content": "read",
+            "Read": "read",
+            "Write": "write",
+            "Edit": "write",
+            "Glob": "read",
+            "Grep": "read",
             
             # 执行操作
-            "execute_shell": "bash",
-            "run_command": "bash",
+            "Bash": "bash",
+            "PowerShell": "bash",
+            
+            # 交互操作
+            "AskUserQuestion": "interaction",
             
             # 网络操作
-            "fetch_url": "network",
-            "search_web": "network",
+            "WebFetch": "network",
+            "WebSearch": "network",
             
             # 其他
-            "ask_user": "interaction",
-            "get_input": "interaction"
+            "Skill": "skill",
+            "ToolSearch": "utility"
         }
         return tool_categories.get(tool_name, "other")
 
 
 # 注册解析器
-from ..core.parser import register_parser
-register_parser(CodexParser())
+from skillporter.core.parser import register_parser
+register_parser(HermesParser())

@@ -1,16 +1,16 @@
 """
-WorkBuddy平台渲染器 - 渲染Skill为WorkBuddy格式
+通义灵码CLI平台渲染器 - 渲染Skill为通义灵码CLI格式
 ================================================
 
-将通用Skill格式转换为WorkBuddy可识别的格式。
+将通用Skill格式转换为通义灵码CLI可识别的格式。
 
-WorkBuddy skill格式要求：
+通义灵码CLI skill格式要求：
 - 主文件: SKILL.md
 - 格式: YAML前言 + Markdown内容
 - 变量: 使用$VARIABLE_NAME格式
 - 工具: 在YAML前言的allowed-tools字段中定义
 
-作者：Senior Developer (高级开发工程师)
+作者：Ccc
 版本：1.0.0
 """
 
@@ -18,25 +18,26 @@ from typing import Dict, List, Any, Optional, Union
 from pathlib import Path
 import yaml
 
-from ..core.renderer import BaseRenderer
-from ..core.schema import UniversalSkill, SkillPlatform, Variable, ToolPermission
+from skillporter.core.renderer import BaseRenderer
+from skillporter.core.schema import UniversalSkill, SkillPlatform, Variable, ToolPermission
 
 
-class WorkBuddyRenderer(BaseRenderer):
+class QwenCodeRenderer(BaseRenderer):
     """
-    WorkBuddy Skill渲染器
+    通义灵码CLI Skill渲染器
     
-    将通用Skill格式渲染为WorkBuddy可识别的格式。
+    将通用Skill格式渲染为通义灵码CLI可识别的格式。
+    规则与Claude Skills兼容。
     """
     
     @property
     def platform(self) -> SkillPlatform:
         """返回目标平台类型"""
-        return SkillPlatform.WORKBUDDY
+        return SkillPlatform.QWEN
     
     def render_skill(self, skill: UniversalSkill) -> Dict[str, str]:
         """
-        渲染skill为WorkBuddy格式
+        渲染skill为通义灵码CLI格式
         
         Args:
             skill: 要渲染的UniversalSkill对象
@@ -64,7 +65,7 @@ class WorkBuddyRenderer(BaseRenderer):
         """
         渲染skill并保存到单个文件
         
-        对于WorkBuddy，这会生成一个单独的SKILL.md文件。
+        对于通义灵码CLI，这会生成一个单独的SKILL.md文件。
         
         Args:
             skill: 要渲染的skill对象
@@ -171,9 +172,9 @@ class WorkBuddyRenderer(BaseRenderer):
             yaml_data["allowed-tools"] = [tool.name for tool in skill.allowed_tools]
         
         # 平台特有字段
-        workbuddy_overrides = skill.get_platform_override(SkillPlatform.WORKBUDDY)
-        if workbuddy_overrides:
-            yaml_data.update(workbuddy_overrides)
+        qwen_overrides = skill.get_platform_override(SkillPlatform.QWEN)
+        if qwen_overrides:
+            yaml_data.update(qwen_overrides)
         
         return yaml_data
     
@@ -181,13 +182,13 @@ class WorkBuddyRenderer(BaseRenderer):
         """
         获取变量映射规则
         
-        WorkBuddy使用$VARIABLE_NAME格式。
+        通义灵码CLI使用$VARIABLE_NAME格式。
         
         Returns:
             Dict[str, str]: 源变量 -> 目标变量的映射
         """
         return {
-            # 从通用格式到WorkBuddy格式
+            # 从通用格式到通义灵码格式
             "{{args}}": "$ARGUMENTS",
             "{{arguments}}": "$ARGUMENTS",
             "{{context}}": "$CONTEXT",
@@ -201,13 +202,13 @@ class WorkBuddyRenderer(BaseRenderer):
         """
         获取工具名称映射
         
-        WorkBuddy使用与Claude类似的工具名称。
+        通义灵码CLI使用与Claude类似的工具名称。
         
         Returns:
             Dict[str, str]: 源工具名 -> 目标工具名的映射
         """
         return {
-            # 从通用格式到WorkBuddy格式
+            # 从通用格式到通义灵码格式
             "read_file": "Read",
             "write_file": "Write",
             "edit_file": "Edit",
@@ -223,19 +224,20 @@ class WorkBuddyRenderer(BaseRenderer):
         """
         获取路径映射
         
-        WorkBuddy使用~/.workbuddy/skills/路径。
+        通义灵码CLI使用~/.qwen/skills/路径。
         
         Returns:
             Dict[str, str]: 源路径 -> 目标路径的映射
         """
         return {
-            "~/.claude/skills/": "~/.workbuddy/skills/",
-            "~/.codex/skills/": "~/.workbuddy/skills/"
+            "~/.claude/skills/": "~/.qwen/skills/",
+            "~/.codex/skills/": "~/.qwen/skills/",
+            "~/.workbuddy/skills/": "~/.qwen/skills/"
         }
     
     def platform_specific_validation(self, skill: UniversalSkill) -> List[str]:
         """
-        WorkBuddy平台特定的验证逻辑
+        通义灵码CLI平台特定的验证逻辑
         
         Args:
             skill: 要验证的skill对象
@@ -248,12 +250,11 @@ class WorkBuddyRenderer(BaseRenderer):
         # 检查变量格式
         for var in skill.variables:
             if not var.placeholder.startswith("$"):
-                # WorkBuddy也支持{{}}格式，所以这不是错误
-                pass
+                errors.append(f"Variable '{var.name}' must use $ prefix for 通义灵码CLI")
         
         return errors
 
 
 # 注册渲染器
-from ..core.renderer import register_renderer
-register_renderer(WorkBuddyRenderer())
+from skillporter.core.renderer import register_renderer
+register_renderer(QwenCodeRenderer())

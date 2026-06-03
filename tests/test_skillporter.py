@@ -18,7 +18,7 @@ SkillPorter测试脚本
 4. 渲染器测试
 5. CLI测试
 
-作者：Senior Developer (高级开发工程师)
+作者：Ccc
 版本：1.0.0
 """
 

@@ -39,6 +39,48 @@ PLATFORMS = {
         "icon": "🟢",
         "path": "~/.codex/skills/",
     },
+    "codebuddy": {
+        "name": "CodeBuddy",
+        "color": "#8B5CF6",
+        "icon": "🟣",
+        "path": "~/.codebuddy/skills/",
+    },
+    "cursor": {
+        "name": "Cursor",
+        "color": "#059669",
+        "icon": "💎",
+        "path": ".cursorrules",
+    },
+    "cline": {
+        "name": "Cline",
+        "color": "#DC2626",
+        "icon": "🔴",
+        "path": ".clinerules/",
+    },
+    "kilocode": {
+        "name": "KiloCode",
+        "color": "#7C3AED",
+        "icon": "⚡",
+        "path": ".kilo/rules/",
+    },
+    "kimi": {
+        "name": "Kimi Code Agent",
+        "color": "#2563EB",
+        "icon": "🔷",
+        "path": "~/.kimi/skills/",
+    },
+    "qwen": {
+        "name": "通义灵码CLI",
+        "color": "#EA580C",
+        "icon": "🔶",
+        "path": "~/.qwen/skills/",
+    },
+    "hermes": {
+        "name": "Hermes",
+        "color": "#4F46E5",
+        "icon": "🌟",
+        "path": "~/.hermes/skills/",
+    },
 }
 
 

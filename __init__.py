@@ -6,6 +6,13 @@ SkillPorter - 跨平台Skill转换工具
 - WorkBuddy
 - Claude Code
 - OpenAI Codex
+- CodeBuddy
+- Cursor
+- Cline
+- KiloCode
+- Kimi Code Agent
+- 通义灵码CLI
+- Hermes
 
 核心功能：
 1. 解析不同平台的skill格式
@@ -13,20 +20,11 @@ SkillPorter - 跨平台Skill转换工具
 3. 渲染为目标平台格式
 4. 同步到目标平台目录
 
-使用示例：
-    from skillporter import SkillPorterCLI
-    
-    # 创建CLI实例
-    cli = SkillPorterCLI()
-    
-    # 运行命令
-    cli.run(["import", "claude", "my-skill"])
-
-作者：Senior Developer (高级开发工程师)
-版本：1.0.0
+作者：Ccc
+版本：2.1.0
 """
 
-__version__ = "2.0.0"
+__version__ = "2.1.0"
 __author__ = "Senior Developer"
 
 # 导入核心模块
@@ -39,9 +37,6 @@ from .config import (
     SUPPORTED_MODELS
 )
 
-# 导入CLI
-from .cli import SkillPorterCLI, main
-
 # 导入GUI（延迟导入，避免强制依赖 PyQt6）
 def run_gui():
     """启动 GUI 界面"""
@@ -52,7 +47,14 @@ def run_gui():
 from .platforms import (
     ClaudeParser, ClaudeRenderer,
     CodexParser, CodexRenderer,
-    WorkBuddyParser, WorkBuddyRenderer
+    WorkBuddyParser, WorkBuddyRenderer,
+    CodeBuddyParser, CodeBuddyRenderer,
+    CursorParser, CursorRenderer,
+    ClineParser, ClineRenderer,
+    KiloCodeParser, KiloCodeRenderer,
+    KimiCodeAgentParser, KimiCodeAgentRenderer,
+    QwenCodeParser, QwenCodeRenderer,
+    HermesParser, HermesRenderer
 )
 
 __all__ = [
@@ -77,19 +79,29 @@ __all__ = [
     "setup_llm",
     "SUPPORTED_MODELS",
     
-    # CLI
-    "SkillPorterCLI",
-    "main",
-    
     # 平台解析器
     "ClaudeParser",
     "CodexParser",
     "WorkBuddyParser",
+    "CodeBuddyParser",
+    "CursorParser",
+    "ClineParser",
+    "KiloCodeParser",
+    "KimiCodeAgentParser",
+    "QwenCodeParser",
+    "HermesParser",
     
     # 平台渲染器
     "ClaudeRenderer",
     "CodexRenderer",
     "WorkBuddyRenderer",
+    "CodeBuddyRenderer",
+    "CursorRenderer",
+    "ClineRenderer",
+    "KiloCodeRenderer",
+    "KimiCodeAgentRenderer",
+    "QwenCodeRenderer",
+    "HermesRenderer",
 
     # GUI
     "run_gui",

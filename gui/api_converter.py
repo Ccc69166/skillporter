@@ -8,7 +8,7 @@ API 智能转换模块
 费用极低：一个 skill 的转换大概消耗 500-1500 tokens，
 DeepSeek deepseek-chat 大约 0.001-0.003 元/次。
 
-作者：SkillPorter
+作者：Ccc
 版本：1.0.0
 """
 

@@ -10,7 +10,7 @@ Universal Skill Schema (USS) - 跨平台通用Skill数据结构
 2. 可扩展性：通过platform_overrides支持平台特有字段
 3. 完整性：包含skill的所有必要信息（指令、变量、资源文件等）
 
-作者：Senior Developer (高级开发工程师)
+作者：Ccc
 版本：1.0.0
 """
 
@@ -26,6 +26,13 @@ class SkillPlatform(Enum):
     WORKBUDDY = "workbuddy"
     CLAUDE = "claude"
     CODEX = "codex"
+    CODEBUDDY = "codebuddy"
+    CURSOR = "cursor"
+    CLINE = "cline"
+    KILOCODE = "kilocode"
+    KIMI = "kimi"
+    QWEN = "qwen"
+    HERMES = "hermes"
 
 
 class VariableType(Enum):

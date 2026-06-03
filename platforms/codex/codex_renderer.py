@@ -10,7 +10,7 @@ Codex skill格式要求：
 - 变量: 使用{{variable_name}}格式
 - 工具: 在配置文件中定义
 
-作者：Senior Developer (高级开发工程师)
+作者：Ccc
 版本：1.0.0
 """
 
@@ -18,8 +18,8 @@ from typing import Dict, List, Any, Optional, Union
 from pathlib import Path
 import yaml
 
-from ..core.renderer import BaseRenderer
-from ..core.schema import UniversalSkill, SkillPlatform, Variable, ToolPermission
+from skillporter.core.renderer import BaseRenderer
+from skillporter.core.schema import UniversalSkill, SkillPlatform, Variable, ToolPermission
 
 
 class CodexRenderer(BaseRenderer):
@@ -341,5 +341,5 @@ class CodexRenderer(BaseRenderer):
 
 
 # 注册渲染器
-from ..core.renderer import register_renderer
+from skillporter.core.renderer import register_renderer
 register_renderer(CodexRenderer())

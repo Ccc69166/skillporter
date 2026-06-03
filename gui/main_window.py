@@ -270,7 +270,7 @@ class MainWindow(QMainWindow):
         header_layout.addWidget(subtitle)
         header_layout.addStretch()
 
-        version_label = QLabel("v2.0")
+        version_label = QLabel("v1.0")
         version_label.setStyleSheet(f"""
             background-color: {COLORS["accent_light"]};
             color: {COLORS["accent"]};
@@ -479,7 +479,7 @@ def run_gui():
     """启动 GUI"""
     app = QApplication(sys.argv)
     app.setApplicationName("SkillPorter")
-    app.setApplicationVersion("2.0")
+    app.setApplicationVersion("1.0")
 
     font = QFont("Microsoft YaHei", 10)
     app.setFont(font)

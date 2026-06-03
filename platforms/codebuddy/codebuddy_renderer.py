@@ -1,43 +1,43 @@
 """
-Claude平台渲染器 - 渲染Skill为Claude Code格式
-==============================================
+CodeBuddy平台渲染器 - 渲染Skill为CodeBuddy格式
+================================================
 
-将通用Skill格式转换为Claude Code可识别的格式。
+将通用Skill格式转换为CodeBuddy可识别的格式。
 
-Claude Code skill格式要求：
+CodeBuddy skill格式要求：
 - 主文件: SKILL.md
 - 格式: YAML前言 + Markdown内容
 - 变量: 使用$VARIABLE_NAME格式
 - 工具: 在YAML前言的allowed-tools字段中定义
 
-作者：Senior Developer (高级开发工程师)
+作者：Ccc
 版本：1.0.0
 """
 
 from typing import Dict, List, Any, Optional, Union
 from pathlib import Path
 import yaml
-import re
 
-from ..core.renderer import BaseRenderer
-from ..core.schema import UniversalSkill, SkillPlatform, Variable, ToolPermission
+from skillporter.core.renderer import BaseRenderer
+from skillporter.core.schema import UniversalSkill, SkillPlatform, Variable, ToolPermission
 
 
-class ClaudeRenderer(BaseRenderer):
+class CodeBuddyRenderer(BaseRenderer):
     """
-    Claude Code Skill渲染器
+    CodeBuddy Skill渲染器
     
-    将通用Skill格式渲染为Claude Code可识别的格式。
+    将通用Skill格式渲染为CodeBuddy可识别的格式。
+    规则与WorkBuddy完全一致。
     """
     
     @property
     def platform(self) -> SkillPlatform:
         """返回目标平台类型"""
-        return SkillPlatform.CLAUDE
+        return SkillPlatform.CODEBUDDY
     
     def render_skill(self, skill: UniversalSkill) -> Dict[str, str]:
         """
-        渲染skill为Claude Code格式
+        渲染skill为CodeBuddy格式
         
         Args:
             skill: 要渲染的UniversalSkill对象
@@ -65,7 +65,7 @@ class ClaudeRenderer(BaseRenderer):
         """
         渲染skill并保存到单个文件
         
-        对于Claude Code，这会生成一个单独的SKILL.md文件。
+        对于CodeBuddy，这会生成一个单独的SKILL.md文件。
         
         Args:
             skill: 要渲染的skill对象
@@ -172,9 +172,9 @@ class ClaudeRenderer(BaseRenderer):
             yaml_data["allowed-tools"] = [tool.name for tool in skill.allowed_tools]
         
         # 平台特有字段
-        claude_overrides = skill.get_platform_override(SkillPlatform.CLAUDE)
-        if claude_overrides:
-            yaml_data.update(claude_overrides)
+        codebuddy_overrides = skill.get_platform_override(SkillPlatform.CODEBUDDY)
+        if codebuddy_overrides:
+            yaml_data.update(codebuddy_overrides)
         
         return yaml_data
     
@@ -182,13 +182,13 @@ class ClaudeRenderer(BaseRenderer):
         """
         获取变量映射规则
         
-        Claude Code使用$VARIABLE_NAME格式。
+        CodeBuddy使用$VARIABLE_NAME格式。
         
         Returns:
             Dict[str, str]: 源变量 -> 目标变量的映射
         """
         return {
-            # 从通用格式到Claude格式
+            # 从通用格式到CodeBuddy格式
             "{{args}}": "$ARGUMENTS",
             "{{arguments}}": "$ARGUMENTS",
             "{{context}}": "$CONTEXT",
@@ -202,13 +202,13 @@ class ClaudeRenderer(BaseRenderer):
         """
         获取工具名称映射
         
-        Claude Code使用特定的工具名称。
+        CodeBuddy使用与WorkBuddy类似的工具名称。
         
         Returns:
             Dict[str, str]: 源工具名 -> 目标工具名的映射
         """
         return {
-            # 从通用格式到Claude格式
+            # 从通用格式到CodeBuddy格式
             "read_file": "Read",
             "write_file": "Write",
             "edit_file": "Edit",
@@ -224,19 +224,20 @@ class ClaudeRenderer(BaseRenderer):
         """
         获取路径映射
         
-        Claude Code使用~/.claude/skills/路径。
+        CodeBuddy使用~/.codebuddy/skills/路径。
         
         Returns:
             Dict[str, str]: 源路径 -> 目标路径的映射
         """
         return {
-            "~/.workbuddy/skills/": "~/.claude/skills/",
-            "~/.codex/skills/": "~/.claude/skills/"
+            "~/.claude/skills/": "~/.codebuddy/skills/",
+            "~/.codex/skills/": "~/.codebuddy/skills/",
+            "~/.workbuddy/skills/": "~/.codebuddy/skills/"
         }
     
     def platform_specific_validation(self, skill: UniversalSkill) -> List[str]:
         """
-        Claude平台特定的验证逻辑
+        CodeBuddy平台特定的验证逻辑
         
         Args:
             skill: 要验证的skill对象
@@ -246,18 +247,15 @@ class ClaudeRenderer(BaseRenderer):
         """
         errors = []
         
-        # 检查指令长度（Claude有token限制）
-        if len(skill.instructions) > 100000:  # 约100KB
-            warnings.append("Instructions may be too long for Claude Code")
-        
         # 检查变量格式
         for var in skill.variables:
             if not var.placeholder.startswith("$"):
-                errors.append(f"Variable '{var.name}' must use $ prefix for Claude Code")
+                # CodeBuddy也支持{{}}格式，所以这不是错误
+                pass
         
         return errors
 
 
 # 注册渲染器
-from ..core.renderer import register_renderer
-register_renderer(ClaudeRenderer())
+from skillporter.core.renderer import register_renderer
+register_renderer(CodeBuddyRenderer())

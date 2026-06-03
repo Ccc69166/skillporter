@@ -1,23 +1,21 @@
 """
-Claude平台解析器 - 解析Claude Code格式的Skill文件
+通义灵码CLI平台解析器 - 解析通义灵码CLI格式的Skill文件
 ================================================
 
-Claude Code的skill文件结构：
-- 位置: ~/.claude/skills/{skill-name}/SKILL.md
+通义灵码CLI的skill文件结构：
+- 位置: ~/.qwen/skills/{skill-name}/SKILL.md
 - 格式: Markdown + YAML前言
 - 变量: $ARGUMENTS, $CONTEXT等
 - 工具: 在YAML前言的allowed-tools字段中定义
 
-Claude Code skill URL说明：
-Claude Code的官方skill存储在GitHub上：
-https://raw.githubusercontent.com/anthropics/claude-code/main/skills/...
+通义灵码CLI skill特点：
+1. 与Claude Skills格式兼容
+2. 支持SKILL.md文件格式
+3. 支持中英文双语描述
+4. 支持丰富的元数据字段
+5. 阿里系产品，与Qwen模型深度集成
 
-这个URL是Claude Code的官方skill仓库，用户可以通过以下方式导入：
-1. 直接从GitHub下载
-2. 使用 `claude skill add` 命令
-3. 手动复制到 ~/.claude/skills/ 目录
-
-作者：Senior Developer (高级开发工程师)
+作者：Ccc
 版本：1.0.0
 """
 
@@ -26,27 +24,28 @@ from typing import List, Dict, Any, Optional, Union
 from pathlib import Path
 import yaml
 
-from ..core.parser import BaseParser
-from ..core.schema import UniversalSkill, SkillPlatform, Variable, ToolPermission, ResourceFile
+from skillporter.core.parser import BaseParser
+from skillporter.core.schema import UniversalSkill, SkillPlatform, Variable, ToolPermission, ResourceFile
 
 
-class ClaudeParser(BaseParser):
+class QwenCodeParser(BaseParser):
     """
-    Claude Code Skill解析器
+    通义灵码CLI Skill解析器
     
-    解析Claude Code格式的skill文件，转换为通用Skill格式。
+    解析通义灵码CLI格式的skill文件，转换为通用Skill格式。
+    规则与Claude Skills兼容。
     """
     
     @property
     def platform(self) -> SkillPlatform:
         """返回支持的平台类型"""
-        return SkillPlatform.CLAUDE
+        return SkillPlatform.QWEN
     
     def parse_file(self, file_path: Union[str, Path]) -> UniversalSkill:
         """
-        解析单个Claude skill文件
+        解析单个通义灵码CLI skill文件
         
-        Claude skill文件通常是SKILL.md，包含YAML前言和Markdown内容。
+        通义灵码CLI skill文件通常是SKILL.md，包含YAML前言和Markdown内容。
         
         Args:
             file_path: SKILL.md文件路径
@@ -56,7 +55,7 @@ class ClaudeParser(BaseParser):
         """
         path = Path(file_path)
         if not path.exists():
-            raise FileNotFoundError(f"Claude skill file not found: {file_path}")
+            raise FileNotFoundError(f"通义灵码CLI skill file not found: {file_path}")
         
         content = self.read_file(path)
         yaml_data, markdown_content = self.parse_yaml_frontmatter(content)
@@ -85,32 +84,32 @@ class ClaudeParser(BaseParser):
             instructions=markdown_content,
             allowed_tools=allowed_tools,
             variables=variables,
-            source_platform=SkillPlatform.CLAUDE,
+            source_platform=SkillPlatform.QWEN,
             source_path=str(path)
         )
         
         # 提取平台特有字段
         platform_overrides = {}
         for key, value in yaml_data.items():
-            if key not in ["id", "name", "description", "description_zh", "description_en", 
+            if key not in ["id", "name", "description", "description_zh", "description_en",
                           "version", "author", "tags", "allowed-tools"]:
                 platform_overrides[key] = value
         
         if platform_overrides:
-            skill.set_platform_override(SkillPlatform.CLAUDE, platform_overrides)
+            skill.set_platform_override(SkillPlatform.QWEN, platform_overrides)
         
         # 验证skill
         if not self.validate_skill(skill):
             errors = self.get_errors()
-            raise ValueError(f"Invalid Claude skill: {'; '.join(errors)}")
+            raise ValueError(f"Invalid 通义灵码CLI skill: {'; '.join(errors)}")
         
         return skill
     
     def parse_directory(self, dir_path: Union[str, Path]) -> UniversalSkill:
         """
-        解析整个Claude skill目录
+        解析整个通义灵码CLI skill目录
         
-        Claude skill目录结构：
+        通义灵码CLI skill目录结构：
         {skill-name}/
         ├── SKILL.md           # 主skill文件
         ├── scripts/           # 脚本目录（可选）
@@ -126,7 +125,7 @@ class ClaudeParser(BaseParser):
         """
         path = Path(dir_path)
         if not path.exists():
-            raise FileNotFoundError(f"Claude skill directory not found: {dir_path}")
+            raise FileNotFoundError(f"通义灵码CLI skill directory not found: {dir_path}")
         
         # 查找SKILL.md文件
         skill_file = path / "SKILL.md"
@@ -175,11 +174,7 @@ class ClaudeParser(BaseParser):
         """
         从内容中提取变量定义
         
-        Claude Code支持以下变量：
-        - $ARGUMENTS: 用户传入的参数
-        - $CONTEXT: 当前上下文信息
-        - $FILE_PATH: 当前文件路径
-        - $SELECTION: 选中的文本
+        通义灵码CLI支持$VARIABLE_NAME格式的变量。
         
         Args:
             content: 指令内容文本
@@ -218,7 +213,7 @@ class ClaudeParser(BaseParser):
         """
         从YAML数据中提取工具权限
         
-        Claude Code在YAML前言的allowed-tools字段中定义工具权限。
+        通义灵码CLI在YAML前言的allowed-tools字段中定义工具权限。
         
         Args:
             yaml_data: YAML前言数据
@@ -245,7 +240,7 @@ class ClaudeParser(BaseParser):
             tool = ToolPermission(
                 name=tool_name,
                 category=category,
-                description=f"Claude Code tool: {tool_name}"
+                description=f"通义灵码CLI tool: {tool_name}"
             )
             tools.append(tool)
         
@@ -292,5 +287,5 @@ class ClaudeParser(BaseParser):
 
 
 # 注册解析器
-from ..core.parser import register_parser
-register_parser(ClaudeParser())
+from skillporter.core.parser import register_parser
+register_parser(QwenCodeParser())
