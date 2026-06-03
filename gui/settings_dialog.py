@@ -1,0 +1,254 @@
+"""
+设置对话框 - API 配置
+======================
+
+配置 LLM API 密钥和提供商。
+填了密钥就自动启用，不需要手动勾选。
+"""
+
+from PyQt6.QtWidgets import (
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel,
+    QComboBox, QLineEdit, QPushButton, QFrame,
+    QFormLayout, QCheckBox, QMessageBox, QGroupBox
+)
+from PyQt6.QtCore import Qt, pyqtSignal
+
+from .styles import COLORS
+from ..config import get_config, save_config, SUPPORTED_MODELS, setup_llm
+
+
+class SettingsDialog(QDialog):
+    """API 设置对话框"""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("API 配置")
+        self.setMinimumWidth(480)
+        self.setMinimumHeight(360)
+        self._setup_ui()
+        self._load_current_config()
+
+    def _setup_ui(self):
+        layout = QVBoxLayout(self)
+        layout.setSpacing(16)
+        layout.setContentsMargins(24, 24, 24, 24)
+
+        # 标题
+        title = QLabel("API 配置")
+        title.setProperty("heading", True)
+        layout.addWidget(title)
+
+        desc = QLabel("配置 LLM API 用于智能转换（可选）。填写密钥后自动启用。")
+        desc.setProperty("subheading", True)
+        desc.setWordWrap(True)
+        layout.addWidget(desc)
+
+        # === API 配置组 ===
+        api_group = QGroupBox("LLM API 设置")
+        api_layout = QFormLayout(api_group)
+        api_layout.setSpacing(12)
+        api_layout.setContentsMargins(16, 24, 16, 16)
+
+        # 提供商选择
+        self.provider_combo = QComboBox()
+        self.provider_combo.setMinimumHeight(36)
+        for key, info in SUPPORTED_MODELS.items():
+            self.provider_combo.addItem(info["name"], key)
+        self.provider_combo.currentIndexChanged.connect(self._on_provider_changed)
+        api_layout.addRow("提供商:", self.provider_combo)
+
+        # 模型选择
+        self.model_combo = QComboBox()
+        self.model_combo.setMinimumHeight(36)
+        self.model_combo.setEditable(True)
+        api_layout.addRow("模型:", self.model_combo)
+
+        # API 密钥
+        self.api_key_input = QLineEdit()
+        self.api_key_input.setPlaceholderText("sk-xxx...（填写后自动启用）")
+        self.api_key_input.setMinimumHeight(36)
+        self.api_key_input.setEchoMode(QLineEdit.EchoMode.Password)
+        api_layout.addRow("API 密钥:", self.api_key_input)
+
+        # 显示密钥开关
+        self.show_key_check = QCheckBox("显示密钥")
+        self.show_key_check.stateChanged.connect(self._toggle_key_visibility)
+        api_layout.addRow("", self.show_key_check)
+
+        # 自定义 API 地址
+        self.base_url_input = QLineEdit()
+        self.base_url_input.setPlaceholderText("留空使用默认地址")
+        self.base_url_input.setMinimumHeight(36)
+        api_layout.addRow("API 地址:", self.base_url_input)
+
+        # 提示信息
+        self.hint_label = QLabel("")
+        self.hint_label.setProperty("subheading", True)
+        self.hint_label.setWordWrap(True)
+        api_layout.addRow("", self.hint_label)
+
+        layout.addWidget(api_group)
+
+        # === 费用说明 ===
+        cost_frame = QFrame()
+        cost_frame.setProperty("card", True)
+        cost_layout = QVBoxLayout(cost_frame)
+        cost_layout.setSpacing(4)
+
+        cost_title = QLabel("费用说明")
+        cost_title.setStyleSheet(f"font-weight: bold; color: {COLORS['text_primary']};")
+        cost_layout.addWidget(cost_title)
+
+        cost_text = QLabel(
+            "• 每次转换约消耗 500~1500 tokens\n"
+            "• DeepSeek deepseek-chat: 约 ¥0.001~0.003/次\n"
+            "• 通义千问 qwen-turbo: 约 ¥0.002~0.005/次\n"
+            "• 智谱 glm-4-flash: 约 ¥0.003~0.008/次\n"
+            "• 仅在规则转换结果不满意时使用，成本极低"
+        )
+        cost_text.setProperty("subheading", True)
+        cost_text.setWordWrap(True)
+        cost_layout.addWidget(cost_text)
+
+        layout.addWidget(cost_frame)
+
+        # === 按钮 ===
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
+
+        cancel_btn = QPushButton("取消")
+        cancel_btn.setProperty("secondary", True)
+        cancel_btn.setFixedHeight(38)
+        cancel_btn.clicked.connect(self.reject)
+        btn_layout.addWidget(cancel_btn)
+
+        test_btn = QPushButton("测试连接")
+        test_btn.setProperty("secondary", True)
+        test_btn.setFixedHeight(38)
+        test_btn.clicked.connect(self._test_connection)
+        btn_layout.addWidget(test_btn)
+
+        save_btn = QPushButton("保存")
+        save_btn.setFixedHeight(38)
+        save_btn.clicked.connect(self._save_settings)
+        btn_layout.addWidget(save_btn)
+
+        layout.addLayout(btn_layout)
+
+    def _load_current_config(self):
+        """加载当前配置"""
+        config = get_config()
+
+        for i in range(self.provider_combo.count()):
+            if self.provider_combo.itemData(i) == config.llm.provider:
+                self.provider_combo.setCurrentIndex(i)
+                break
+
+        self._on_provider_changed(self.provider_combo.currentIndex())
+        if config.llm.model:
+            index = self.model_combo.findText(config.llm.model)
+            if index >= 0:
+                self.model_combo.setCurrentIndex(index)
+            else:
+                self.model_combo.setEditText(config.llm.model)
+
+        if config.llm.api_key:
+            self.api_key_input.setText(config.llm.api_key)
+
+        if config.llm.base_url:
+            self.base_url_input.setText(config.llm.base_url)
+
+    def _on_provider_changed(self, index: int):
+        """提供商改变时更新模型列表"""
+        provider_key = self.provider_combo.currentData()
+        if not provider_key:
+            return
+
+        provider_info = SUPPORTED_MODELS.get(provider_key, {})
+        models = provider_info.get("models", [])
+        default_model = provider_info.get("default_model", "")
+        base_url = provider_info.get("base_url", "")
+
+        self.model_combo.clear()
+        self.model_combo.addItems(models)
+
+        if default_model:
+            index = self.model_combo.findText(default_model)
+            if index >= 0:
+                self.model_combo.setCurrentIndex(index)
+
+        self.hint_label.setText(f"默认 API 地址: {base_url}")
+        self.base_url_input.setPlaceholderText(f"留空使用 {base_url}")
+
+    def _toggle_key_visibility(self):
+        if self.show_key_check.isChecked():
+            self.api_key_input.setEchoMode(QLineEdit.EchoMode.Normal)
+        else:
+            self.api_key_input.setEchoMode(QLineEdit.EchoMode.Password)
+
+    def _test_connection(self):
+        api_key = self.api_key_input.text().strip()
+        if not api_key:
+            QMessageBox.warning(self, "提示", "请先输入 API 密钥")
+            return
+
+        provider = self.provider_combo.currentData()
+        model = self.model_combo.currentText()
+        base_url = self.base_url_input.text().strip() or None
+
+        try:
+            import urllib.request
+            import json
+
+            provider_info = SUPPORTED_MODELS.get(provider, {})
+            url_base = base_url or provider_info.get("base_url", "")
+            url = f"{url_base}/chat/completions"
+
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {api_key}",
+            }
+            body = {
+                "model": model,
+                "messages": [{"role": "user", "content": "Hi"}],
+                "max_tokens": 10,
+            }
+
+            data = json.dumps(body).encode("utf-8")
+            req = urllib.request.Request(url, data=data, headers=headers, method="POST")
+
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                result = json.loads(resp.read().decode("utf-8"))
+
+            if "choices" in result:
+                QMessageBox.information(self, "测试成功",
+                    f"连接成功！\n\n"
+                    f"提供商: {provider}\n"
+                    f"模型: {model}\n"
+                    f"API 地址: {url_base}")
+            else:
+                QMessageBox.warning(self, "测试失败", f"响应格式异常: {result}")
+
+        except Exception as e:
+            QMessageBox.critical(self, "测试失败", f"连接失败:\n{str(e)}")
+
+    def _save_settings(self):
+        api_key = self.api_key_input.text().strip()
+
+        if not api_key:
+            QMessageBox.warning(self, "提示", "请输入 API 密钥")
+            return
+
+        provider = self.provider_combo.currentData()
+        model = self.model_combo.currentText()
+        base_url = self.base_url_input.text().strip() or None
+
+        try:
+            # 填了密钥就自动启用
+            setup_llm(provider, api_key, model, base_url)
+
+            QMessageBox.information(self, "保存成功", "设置已保存，API 智能转换已启用")
+            self.accept()
+
+        except Exception as e:
+            QMessageBox.critical(self, "保存失败", f"保存设置失败:\n{str(e)}")
