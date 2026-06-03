@@ -63,6 +63,29 @@ class PlatformSelector(QFrame):
 
         self.combo = QComboBox()
         self.combo.setMinimumHeight(38)
+        self.combo.setStyleSheet(f"""
+            QComboBox {{
+                border: 1.5px solid {COLORS["border"]};
+                border-radius: 6px;
+                padding: 8px 12px;
+                background-color: {COLORS["bg_input"]};
+                color: {COLORS["text_primary"]};
+            }}
+            QComboBox:focus {{
+                border-color: {COLORS["border_focus"]};
+            }}
+            QComboBox::drop-down {{
+                border: none;
+                width: 24px;
+            }}
+            QComboBox QAbstractItemView {{
+                background-color: {COLORS["bg_primary"]};
+                border: 1px solid {COLORS["border"]};
+                selection-background-color: {COLORS["bg_selected"]};
+                selection-color: {COLORS["text_primary"]};
+                outline: none;
+            }}
+        """)
         for key, info in PLATFORMS.items():
             self.combo.addItem(f"{info['icon']}  {info['name']}", key)
         self.combo.setCurrentText(f"{PLATFORMS[default]['icon']}  {PLATFORMS[default]['name']}")
@@ -119,19 +142,20 @@ class ConvertPanel(QWidget):
         self.source_selector = PlatformSelector("从", "claude")
         platform_layout.addWidget(self.source_selector, 1)
 
-        # 中间：右箭头按钮（交换功能）
-        swap_btn = QPushButton("→")
+        # 中间：转换箭头按钮（交换功能）
+        swap_btn = QPushButton("⇄")
         swap_btn.setFixedSize(36, 36)
         swap_btn.setToolTip("交换源和目标平台")
         swap_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         swap_btn.setStyleSheet(f"""
             QPushButton {{
-                background-color: transparent;
+                background-color: {COLORS["bg_primary"]};
                 color: {COLORS["accent"]};
-                border: none;
+                border: 1.5px solid {COLORS["accent"]};
                 border-radius: 4px;
-                font-size: 20px;
+                font-size: 16px;
                 font-weight: bold;
+                padding: 2px;
             }}
             QPushButton:hover {{
                 background-color: {COLORS["accent_light"]};

@@ -237,22 +237,30 @@ class SettingsDialog(QDialog):
                 models = [m["id"] for m in result["data"]]
                 models.sort()
 
+                # 更新模型下拉框
+                self.model_combo.blockSignals(True)
                 self.model_combo.clear()
                 self.model_combo.addItems(models)
+                self.model_combo.blockSignals(False)
 
-                # 尝试选择之前的默认模型
+                # 优先选默认模型，否则选第一个
                 default_model = provider_info.get("default_model", "")
-                if default_model:
-                    index = self.model_combo.findText(default_model)
-                    if index >= 0:
-                        self.model_combo.setCurrentIndex(index)
+                idx = self.model_combo.findText(default_model) if default_model else -1
+                if idx >= 0:
+                    self.model_combo.setCurrentIndex(idx)
+                elif self.model_combo.count() > 0:
+                    self.model_combo.setCurrentIndex(0)
 
-                QMessageBox.information(self, "成功", f"获取到 {len(models)} 个模型")
+                self.model_combo.setFocus()
+                self.hint_label.setText(f"✓ 已获取 {len(models)} 个模型，请在列表中选取")
+                self.hint_label.setStyleSheet(f"color: {COLORS['accent_success']};")
             else:
-                QMessageBox.warning(self, "失败", f"响应格式异常: {result}")
+                self.hint_label.setText("✗ 响应格式异常，无法获取模型列表")
+                self.hint_label.setStyleSheet(f"color: {COLORS['accent_error']};")
 
         except Exception as e:
-            QMessageBox.critical(self, "失败", f"获取模型列表失败:\n{str(e)}")
+            self.hint_label.setText(f"✗ 获取失败: {str(e)[:60]}")
+            self.hint_label.setStyleSheet(f"color: {COLORS['accent_error']};")
 
     def _test_connection(self):
         api_key = self.api_key_input.text().strip()
