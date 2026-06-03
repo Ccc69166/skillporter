@@ -74,7 +74,7 @@ class SettingsDialog(QDialog):
         self.setWindowTitle("API 配置")
         self.setMinimumWidth(420)
         self.setMinimumHeight(280)
-        self.resize(460, 520)
+        self.resize(460, 400)
         self._setup_ui()
         self._load_current_config()
 

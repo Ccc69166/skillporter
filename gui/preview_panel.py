@@ -115,7 +115,7 @@ class PreviewPanel(QWidget):
 
         splitter.addWidget(left_panel)
         splitter.addWidget(right_panel)
-        splitter.setSizes([1, 1])  # 均分
+        splitter.setSizes([500, 500])  # 均分
 
         layout.addWidget(splitter)
 

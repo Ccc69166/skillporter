@@ -322,6 +322,8 @@ class MainWindow(QMainWindow):
 
     def _open_settings(self):
         dialog = SettingsDialog(self)
+        # 弹出时顶部贴屏幕上方
+        QTimer.singleShot(0, lambda: dialog.move(dialog.x(), 0))
         dialog.exec()
         self._update_api_status()
 
