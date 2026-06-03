@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QComboBox, QPushButton, QFileDialog, QLineEdit,
     QFrame, QProgressBar, QRadioButton, QButtonGroup,
-    QListWidget, QListWidgetItem, QSizePolicy
+    QListWidget, QListWidgetItem, QSizePolicy, QGridLayout
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QMimeData
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QFont, QIcon
@@ -133,19 +133,63 @@ class ConvertPanel(QWidget):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(12)
 
-        # === 平台选择区 ===
+        # === 平台选择区（QGridLayout：标签在 row 0，combo+按钮在 row 1）===
         platform_frame = QFrame()
         platform_frame.setProperty("card", True)
-        platform_layout = QHBoxLayout(platform_frame)
-        platform_layout.setContentsMargins(16, 12, 16, 12)
-        platform_layout.setSpacing(8)
-        platform_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
+        platform_grid = QGridLayout(platform_frame)
+        platform_grid.setContentsMargins(12, 12, 12, 12)
+        platform_grid.setHorizontalSpacing(8)
+        platform_grid.setVerticalSpacing(6)
 
-        # 源平台
-        self.source_selector = PlatformSelector("从", "claude")
-        platform_layout.addWidget(self.source_selector, 1)
+        # Row 0: 标签
+        from_label = QLabel("从")
+        from_label.setProperty("subheading", True)
+        platform_grid.addWidget(from_label, 0, 0)
 
-        # 中间：转换箭头按钮（交换功能）
+        to_label = QLabel("转换为")
+        to_label.setProperty("subheading", True)
+        platform_grid.addWidget(to_label, 0, 2)
+
+        # Row 1: combo + swap 按钮
+        combo_style = f"""
+            QComboBox {{
+                border: 1.5px solid {COLORS["border"]};
+                border-radius: 6px;
+                padding: 6px 8px;
+                background-color: {COLORS["bg_input"]};
+                color: {COLORS["text_primary"]};
+            }}
+            QComboBox:focus {{
+                border-color: {COLORS["border_focus"]};
+            }}
+            QComboBox::drop-down {{
+                border: none;
+                width: 20px;
+                subcontrol-origin: padding;
+                subcontrol-position: center right;
+            }}
+            QComboBox QAbstractItemView {{
+                background-color: {COLORS["bg_primary"]};
+                border: 1px solid {COLORS["border"]};
+                selection-background-color: {COLORS["bg_selected"]};
+                selection-color: {COLORS["text_primary"]};
+                outline: none;
+            }}
+        """
+
+        # 源平台 combo
+        self.source_combo = QComboBox()
+        self.source_combo.setMinimumHeight(38)
+        self.source_combo.setStyleSheet(combo_style)
+        for key, info in PLATFORMS.items():
+            self.source_combo.addItem(f"{info['icon']}  {info['name']}", key)
+        self.source_combo.setCurrentIndex(0)
+        self.source_combo.currentIndexChanged.connect(
+            lambda: self.source_selected.emit(self.source_combo.currentData() or "")
+        )
+        platform_grid.addWidget(self.source_combo, 1, 0)
+
+        # 转换箭头按钮（与 combo 同行）
         swap_btn = QPushButton("⇄")
         swap_btn.setFixedSize(38, 38)
         swap_btn.setToolTip("交换源和目标平台")
@@ -165,11 +209,21 @@ class ConvertPanel(QWidget):
             }}
         """)
         swap_btn.clicked.connect(self._swap_platforms)
-        platform_layout.addWidget(swap_btn, 0, Qt.AlignmentFlag.AlignVCenter)
+        platform_grid.addWidget(swap_btn, 1, 1, Qt.AlignmentFlag.AlignVCenter)
 
-        # 目标平台
-        self.target_selector = PlatformSelector("转换为", "workbuddy")
-        platform_layout.addWidget(self.target_selector, 1)
+        # 目标平台 combo
+        self.target_combo = QComboBox()
+        self.target_combo.setMinimumHeight(38)
+        self.target_combo.setStyleSheet(combo_style)
+        for key, info in PLATFORMS.items():
+            self.target_combo.addItem(f"{info['icon']}  {info['name']}", key)
+        self.target_combo.setCurrentIndex(1)  # 默认 WorkBuddy
+        platform_grid.addWidget(self.target_combo, 1, 2)
+
+        # 列拉伸：combo 拉伸，按钮不拉伸
+        platform_grid.setColumnStretch(0, 1)
+        platform_grid.setColumnStretch(1, 0)
+        platform_grid.setColumnStretch(2, 1)
 
         main_layout.addWidget(platform_frame)
 
@@ -295,15 +349,15 @@ class ConvertPanel(QWidget):
 
     def _swap_platforms(self):
         """交换源和目标平台"""
-        src = self.source_selector.get_platform()
-        tgt = self.target_selector.get_platform()
-        self.source_selector.set_platform(tgt)
-        self.target_selector.set_platform(src)
+        src_idx = self.source_combo.currentIndex()
+        tgt_idx = self.target_combo.currentIndex()
+        self.source_combo.setCurrentIndex(tgt_idx)
+        self.target_combo.setCurrentIndex(src_idx)
 
     def _browse_files(self):
         """浏览选择文件/文件夹（只弹一个对话框）"""
         # 根据源平台自动定位到对应目录
-        source_platform = self.source_selector.get_platform()
+        source_platform = self.source_combo.currentData()
         platform_info = PLATFORMS.get(source_platform, {})
         default_dir = str(Path(platform_info.get("path", "~/.workbuddy/skills/")).expanduser())
 
@@ -340,8 +394,8 @@ class ConvertPanel(QWidget):
     def get_config(self) -> dict:
         """获取当前转换配置"""
         return {
-            "source_platform": self.source_selector.get_platform(),
-            "target_platform": self.target_selector.get_platform(),
+            "source_platform": self.source_combo.currentData(),
+            "target_platform": self.target_combo.currentData(),
             "source_path": self._selected_path,
             "use_rule": self.rule_radio.isChecked(),
             "use_api": self.api_radio.isChecked(),

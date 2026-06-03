@@ -149,8 +149,8 @@ QComboBox {{
     background-color: {COLORS["bg_input"]};
     border: 1.5px solid {COLORS["border"]};
     border-radius: 6px;
-    padding: 8px 12px;
-    min-width: 120px;
+    padding: 6px 8px;
+    min-width: 100px;
 }}
 QComboBox:focus {{
     border-color: {COLORS["border_focus"]};

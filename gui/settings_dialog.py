@@ -110,6 +110,11 @@ class SettingsDialog(QDialog):
         model_layout = QHBoxLayout()
         model_layout.setSpacing(8)
 
+        # 下拉箭头 SVG 路径
+        import os
+        _assets = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
+        _arrow_svg = os.path.join(_assets, "arrow_down.svg").replace("\\", "/")
+
         self.model_combo = QComboBox()
         self.model_combo.setMinimumHeight(36)
         self.model_combo.setEditable(True)
@@ -117,7 +122,7 @@ class SettingsDialog(QDialog):
             QComboBox {{
                 border: 1.5px solid {COLORS["border"]};
                 border-radius: 6px;
-                padding: 8px 32px 8px 12px;
+                padding: 6px 30px 6px 10px;
                 background-color: {COLORS["bg_input"]};
                 color: {COLORS["text_primary"]};
             }}
@@ -127,18 +132,14 @@ class SettingsDialog(QDialog):
             QComboBox::drop-down {{
                 border: none;
                 border-left: 1px solid {COLORS["border_light"]};
-                width: 28px;
+                width: 26px;
                 subcontrol-origin: padding;
                 subcontrol-position: center right;
             }}
             QComboBox::down-arrow {{
-                image: none;
-                width: 0;
-                height: 0;
-                border-left: 5px solid transparent;
-                border-right: 5px solid transparent;
-                border-top: 6px solid {COLORS["text_muted"]};
-                margin-right: 8px;
+                image: url("{_arrow_svg}");
+                width: 10px;
+                height: 6px;
             }}
             QComboBox QAbstractItemView {{
                 background-color: {COLORS["bg_primary"]};
