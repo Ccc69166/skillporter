@@ -48,7 +48,7 @@ SUPPORTED_MODELS = {
         "name": "OpenAI",
         "base_url": "https://api.openai.com/v1",
         "models": ["gpt-3.5-turbo", "gpt-4", "gpt-4-turbo", "gpt-4o", "gpt-4o-mini"],
-        "default_model": "gpt-3.5-turbo"
+        "default_model": "gpt-4o-mini"
     },
     "deepseek": {
         "name": "DeepSeek（推荐）",
@@ -59,7 +59,7 @@ SUPPORTED_MODELS = {
     "zhipu": {
         "name": "智谱AI",
         "base_url": "https://open.bigmodel.cn/api/paas/v4",
-        "models": ["glm-4", "glm-4-flash", "glm-3-turbo"],
+        "models": ["glm-4", "glm-4-flash", "glm-4v", "glm-3-turbo"],
         "default_model": "glm-4-flash"
     },
     "qwen": {
@@ -77,20 +77,38 @@ SUPPORTED_MODELS = {
     "google": {
         "name": "Google Gemini",
         "base_url": "https://generativelanguage.googleapis.com/v1beta",
-        "models": ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash"],
-        "default_model": "gemini-1.5-flash"
+        "models": ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash"],
+        "default_model": "gemini-2.5-flash"
     },
     "kimi": {
         "name": "Kimi（月之暗面）",
         "base_url": "https://api.moonshot.cn/v1",
-        "models": ["moonshot-v1-8k", "moonshot-v1-32k", "moonshot-v1-128k"],
-        "default_model": "moonshot-v1-8k"
+        "models": ["kimi-k2.6", "moonshot-v1-8k", "moonshot-v1-32k", "moonshot-v1-128k"],
+        "default_model": "kimi-k2.6"
     },
-    "mimo": {
-        "name": "小米MiMo",
-        "base_url": "https://api.mimo.ai/v1",
-        "models": ["mimo-7b", "mimo-13b", "mimo-70b"],
-        "default_model": "mimo-7b"
+    "mimo-openai": {
+        "name": "小米MiMo (OpenAI格式)",
+        "base_url": "https://api.mimo-v2.com/v1",
+        "models": ["mimo-v2.5-pro", "mimo-v2.5", "mimo-v2-flash"],
+        "default_model": "mimo-v2.5"
+    },
+    "mimo-anthropic": {
+        "name": "小米MiMo (Anthropic格式)",
+        "base_url": "https://api.mimo-v2.com/anthropic",
+        "models": ["mimo-v2.5-pro", "mimo-v2.5", "mimo-v2-flash"],
+        "default_model": "mimo-v2.5"
+    },
+    "mimo-tokenplan-openai": {
+        "name": "小米MiMo TokenPlan (OpenAI)",
+        "base_url": "https://token-plan-cn.xiaomimimo.com/v1",
+        "models": ["mimo-v2.5-pro", "mimo-v2.5", "mimo-v2-flash"],
+        "default_model": "mimo-v2.5"
+    },
+    "mimo-tokenplan-anthropic": {
+        "name": "小米MiMo TokenPlan (Anthropic)",
+        "base_url": "https://token-plan-cn.xiaomimimo.com/anthropic",
+        "models": ["mimo-v2.5-pro", "mimo-v2.5", "mimo-v2-flash"],
+        "default_model": "mimo-v2.5"
     }
 }
 

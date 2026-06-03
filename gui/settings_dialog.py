@@ -58,10 +58,23 @@ class SettingsDialog(QDialog):
         api_layout.addRow("提供商:", self.provider_combo)
 
         # 模型选择
+        model_layout = QHBoxLayout()
+        model_layout.setSpacing(8)
+
         self.model_combo = QComboBox()
         self.model_combo.setMinimumHeight(36)
         self.model_combo.setEditable(True)
-        api_layout.addRow("模型:", self.model_combo)
+        model_layout.addWidget(self.model_combo)
+
+        refresh_models_btn = QPushButton("刷新")
+        refresh_models_btn.setProperty("secondary", True)
+        refresh_models_btn.setFixedHeight(36)
+        refresh_models_btn.setFixedWidth(60)
+        refresh_models_btn.setToolTip("从API获取可用模型列表")
+        refresh_models_btn.clicked.connect(self._refresh_models)
+        model_layout.addWidget(refresh_models_btn)
+
+        api_layout.addRow("模型:", model_layout)
 
         # API 密钥
         self.api_key_input = QLineEdit()
@@ -185,6 +198,61 @@ class SettingsDialog(QDialog):
             self.api_key_input.setEchoMode(QLineEdit.EchoMode.Normal)
         else:
             self.api_key_input.setEchoMode(QLineEdit.EchoMode.Password)
+
+    def _refresh_models(self):
+        """从API获取可用模型列表"""
+        api_key = self.api_key_input.text().strip()
+        if not api_key:
+            QMessageBox.warning(self, "提示", "请先输入 API 密钥")
+            return
+
+        provider = self.provider_combo.currentData()
+        base_url = self.base_url_input.text().strip() or None
+
+        try:
+            provider_info = SUPPORTED_MODELS.get(provider, {})
+            url_base = base_url or provider_info.get("base_url", "")
+
+            # 根据提供商调用不同的模型列表API
+            if "anthropic" in provider:
+                # Anthropic 格式不支持模型列表API，使用预设列表
+                QMessageBox.information(self, "提示", "Anthropic 暂不支持自动获取模型列表，使用预设列表")
+                return
+
+            # OpenAI 格式的模型列表API
+            url = f"{url_base}/models"
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+            }
+
+            import urllib.request
+            import json
+
+            req = urllib.request.Request(url, headers=headers, method="GET")
+
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                result = json.loads(resp.read().decode("utf-8"))
+
+            if "data" in result:
+                models = [m["id"] for m in result["data"]]
+                models.sort()
+
+                self.model_combo.clear()
+                self.model_combo.addItems(models)
+
+                # 尝试选择之前的默认模型
+                default_model = provider_info.get("default_model", "")
+                if default_model:
+                    index = self.model_combo.findText(default_model)
+                    if index >= 0:
+                        self.model_combo.setCurrentIndex(index)
+
+                QMessageBox.information(self, "成功", f"获取到 {len(models)} 个模型")
+            else:
+                QMessageBox.warning(self, "失败", f"响应格式异常: {result}")
+
+        except Exception as e:
+            QMessageBox.critical(self, "失败", f"获取模型列表失败:\n{str(e)}")
 
     def _test_connection(self):
         api_key = self.api_key_input.text().strip()

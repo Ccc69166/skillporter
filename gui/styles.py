@@ -157,10 +157,7 @@ QComboBox:focus {{
 }}
 QComboBox::drop-down {{
     border: none;
-    border-left: 1.5px solid {COLORS["border"]};
     width: 24px;
-    subcontrol-origin: padding;
-    subcontrol-position: center right;
 }}
 QComboBox QAbstractItemView {{
     background-color: {COLORS["bg_primary"]};

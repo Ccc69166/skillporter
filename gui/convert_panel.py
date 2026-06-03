@@ -119,23 +119,22 @@ class ConvertPanel(QWidget):
         self.source_selector = PlatformSelector("从", "claude")
         platform_layout.addWidget(self.source_selector, 1)
 
-        # 中间：双向箭头按钮（交换功能）
-        swap_btn = QPushButton("⇄")
+        # 中间：右箭头按钮（交换功能）
+        swap_btn = QPushButton("→")
         swap_btn.setFixedSize(36, 36)
         swap_btn.setToolTip("交换源和目标平台")
         swap_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         swap_btn.setStyleSheet(f"""
             QPushButton {{
-                background-color: {COLORS["bg_primary"]};
+                background-color: transparent;
                 color: {COLORS["accent"]};
-                border: 2px solid {COLORS["accent"]};
+                border: none;
                 border-radius: 4px;
-                font-size: 18px;
+                font-size: 20px;
                 font-weight: bold;
             }}
             QPushButton:hover {{
                 background-color: {COLORS["accent_light"]};
-                border-color: {COLORS["accent_hover"]};
             }}
         """)
         swap_btn.clicked.connect(self._swap_platforms)
