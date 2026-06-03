@@ -70,6 +70,7 @@ class PlatformSelector(QFrame):
                 padding: 8px 12px;
                 background-color: {COLORS["bg_input"]};
                 color: {COLORS["text_primary"]};
+                min-width: 140px;
             }}
             QComboBox:focus {{
                 border-color: {COLORS["border_focus"]};
@@ -77,6 +78,8 @@ class PlatformSelector(QFrame):
             QComboBox::drop-down {{
                 border: none;
                 width: 24px;
+                subcontrol-origin: padding;
+                subcontrol-position: center right;
             }}
             QComboBox QAbstractItemView {{
                 background-color: {COLORS["bg_primary"]};
@@ -90,7 +93,7 @@ class PlatformSelector(QFrame):
             self.combo.addItem(f"{info['icon']}  {info['name']}", key)
         self.combo.setCurrentText(f"{PLATFORMS[default]['icon']}  {PLATFORMS[default]['name']}")
         self.combo.currentIndexChanged.connect(self._on_changed)
-        layout.addWidget(self.combo)
+        layout.addWidget(self.combo, 1)
 
     def _on_changed(self, index: int):
         platform_key = self.combo.currentData()
@@ -135,8 +138,9 @@ class ConvertPanel(QWidget):
         platform_frame = QFrame()
         platform_frame.setProperty("card", True)
         platform_layout = QHBoxLayout(platform_frame)
-        platform_layout.setContentsMargins(16, 16, 16, 16)
+        platform_layout.setContentsMargins(16, 12, 16, 12)
         platform_layout.setSpacing(8)
+        platform_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
         # 源平台
         self.source_selector = PlatformSelector("从", "claude")
@@ -162,7 +166,7 @@ class ConvertPanel(QWidget):
             }}
         """)
         swap_btn.clicked.connect(self._swap_platforms)
-        platform_layout.addWidget(swap_btn, 0, Qt.AlignmentFlag.AlignBottom)
+        platform_layout.addWidget(swap_btn, 0, Qt.AlignmentFlag.AlignVCenter)
 
         # 目标平台
         self.target_selector = PlatformSelector("转换为", "workbuddy")

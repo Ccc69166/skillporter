@@ -9,12 +9,61 @@
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
     QComboBox, QLineEdit, QPushButton, QFrame,
-    QFormLayout, QCheckBox, QMessageBox, QGroupBox
+    QFormLayout, QCheckBox, QMessageBox, QGroupBox,
+    QProgressDialog
 )
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal, QTimer
+from PyQt6.QtGui import QMovie
 
 from .styles import COLORS
 from ..config import get_config, save_config, SUPPORTED_MODELS, setup_llm
+
+
+class LoadingDialog(QDialog):
+    """轻量级加载弹窗，显示文字+转圈"""
+
+    def __init__(self, message: str, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("")
+        self.setModal(True)
+        self.setFixedSize(220, 90)
+        self.setWindowFlags(
+            Qt.WindowType.Dialog
+            | Qt.WindowType.CustomizeWindowHint
+            | Qt.WindowType.FramelessWindowHint
+        )
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+
+        layout = QVBoxLayout(self)
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        # 内容容器
+        container = QLabel()
+        container.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        container.setStyleSheet(f"""
+            QLabel {{
+                background-color: rgba(255, 255, 255, 240);
+                border: 1px solid {COLORS["border"]};
+                border-radius: 10px;
+                padding: 16px 24px;
+                font-size: 13px;
+                color: {COLORS["text_secondary"]};
+            }}
+        """)
+        container.setText(f"⟳  {message}")
+        layout.addWidget(container)
+
+        # 旋转动画定时器
+        self._dots = 0
+        self._label = container
+        self._message = message
+        self._timer = QTimer(self)
+        self._timer.timeout.connect(self._tick)
+        self._timer.start(400)
+
+    def _tick(self):
+        self._dots = (self._dots + 1) % 4
+        self._label.setText(f"⟳{'.' * self._dots}  {self._message}")
 
 
 class SettingsDialog(QDialog):
@@ -64,12 +113,41 @@ class SettingsDialog(QDialog):
         self.model_combo = QComboBox()
         self.model_combo.setMinimumHeight(36)
         self.model_combo.setEditable(True)
-        model_layout.addWidget(self.model_combo)
+        self.model_combo.setStyleSheet(f"""
+            QComboBox {{
+                border: 1.5px solid {COLORS["border"]};
+                border-radius: 6px;
+                padding: 8px 32px 8px 12px;
+                background-color: {COLORS["bg_input"]};
+                color: {COLORS["text_primary"]};
+            }}
+            QComboBox:focus {{
+                border-color: {COLORS["border_focus"]};
+            }}
+            QComboBox::drop-down {{
+                border: none;
+                width: 30px;
+                subcontrol-origin: padding;
+                subcontrol-position: center right;
+            }}
+            QComboBox::down-arrow {{
+                width: 12px;
+                height: 12px;
+            }}
+            QComboBox QAbstractItemView {{
+                background-color: {COLORS["bg_primary"]};
+                border: 1px solid {COLORS["border"]};
+                selection-background-color: {COLORS["bg_selected"]};
+                selection-color: {COLORS["text_primary"]};
+                outline: none;
+            }}
+        """)
+        model_layout.addWidget(self.model_combo, 1)
 
         refresh_models_btn = QPushButton("刷新")
         refresh_models_btn.setProperty("secondary", True)
         refresh_models_btn.setFixedHeight(36)
-        refresh_models_btn.setFixedWidth(60)
+        refresh_models_btn.setMinimumWidth(70)
         refresh_models_btn.setToolTip("从API获取可用模型列表")
         refresh_models_btn.clicked.connect(self._refresh_models)
         model_layout.addWidget(refresh_models_btn)
@@ -207,31 +285,35 @@ class SettingsDialog(QDialog):
             return
 
         provider = self.provider_combo.currentData()
+
+        # Anthropic 不支持模型列表API
+        if "anthropic" in provider:
+            QMessageBox.information(self, "提示", "Anthropic 暂不支持自动获取模型列表，使用预设列表")
+            return
+
         base_url = self.base_url_input.text().strip() or None
+        provider_info = SUPPORTED_MODELS.get(provider, {})
+        url_base = base_url or provider_info.get("base_url", "")
+
+        # 显示加载弹窗
+        loading = LoadingDialog("刷新模型列表中...", self)
+        loading.show()
 
         try:
-            provider_info = SUPPORTED_MODELS.get(provider, {})
-            url_base = base_url or provider_info.get("base_url", "")
-
-            # 根据提供商调用不同的模型列表API
-            if "anthropic" in provider:
-                # Anthropic 格式不支持模型列表API，使用预设列表
-                QMessageBox.information(self, "提示", "Anthropic 暂不支持自动获取模型列表，使用预设列表")
-                return
-
-            # OpenAI 格式的模型列表API
-            url = f"{url_base}/models"
-            headers = {
-                "Authorization": f"Bearer {api_key}",
-            }
-
             import urllib.request
             import json
+            from PyQt6.QtWidgets import QApplication
+
+            url = f"{url_base}/models"
+            headers = {"Authorization": f"Bearer {api_key}"}
 
             req = urllib.request.Request(url, headers=headers, method="GET")
+            QApplication.processEvents()
 
             with urllib.request.urlopen(req, timeout=15) as resp:
                 result = json.loads(resp.read().decode("utf-8"))
+
+            loading.close()
 
             if "data" in result:
                 models = [m["id"] for m in result["data"]]
@@ -259,6 +341,7 @@ class SettingsDialog(QDialog):
                 self.hint_label.setStyleSheet(f"color: {COLORS['accent_error']};")
 
         except Exception as e:
+            loading.close()
             self.hint_label.setText(f"✗ 获取失败: {str(e)[:60]}")
             self.hint_label.setStyleSheet(f"color: {COLORS['accent_error']};")
 
@@ -272,9 +355,14 @@ class SettingsDialog(QDialog):
         model = self.model_combo.currentText()
         base_url = self.base_url_input.text().strip() or None
 
+        # 显示加载弹窗
+        loading = LoadingDialog("测试连接中...", self)
+        loading.show()
+
         try:
             import urllib.request
             import json
+            from PyQt6.QtWidgets import QApplication
 
             provider_info = SUPPORTED_MODELS.get(provider, {})
             url_base = base_url or provider_info.get("base_url", "")
@@ -292,9 +380,12 @@ class SettingsDialog(QDialog):
 
             data = json.dumps(body).encode("utf-8")
             req = urllib.request.Request(url, data=data, headers=headers, method="POST")
+            QApplication.processEvents()
 
             with urllib.request.urlopen(req, timeout=15) as resp:
                 result = json.loads(resp.read().decode("utf-8"))
+
+            loading.close()
 
             if "choices" in result:
                 QMessageBox.information(self, "测试成功",
@@ -306,6 +397,7 @@ class SettingsDialog(QDialog):
                 QMessageBox.warning(self, "测试失败", f"响应格式异常: {result}")
 
         except Exception as e:
+            loading.close()
             QMessageBox.critical(self, "测试失败", f"连接失败:\n{str(e)}")
 
     def _save_settings(self):
