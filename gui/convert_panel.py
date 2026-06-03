@@ -162,12 +162,6 @@ class ConvertPanel(QWidget):
             QComboBox:focus {{
                 border-color: {COLORS["border_focus"]};
             }}
-            QComboBox::drop-down {{
-                border: none;
-                width: 20px;
-                subcontrol-origin: padding;
-                subcontrol-position: center right;
-            }}
             QComboBox QAbstractItemView {{
                 background-color: {COLORS["bg_primary"]};
                 border: 1px solid {COLORS["border"]};
