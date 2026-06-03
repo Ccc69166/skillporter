@@ -126,13 +126,19 @@ class SettingsDialog(QDialog):
             }}
             QComboBox::drop-down {{
                 border: none;
-                width: 30px;
+                border-left: 1px solid {COLORS["border_light"]};
+                width: 28px;
                 subcontrol-origin: padding;
                 subcontrol-position: center right;
             }}
             QComboBox::down-arrow {{
-                width: 12px;
-                height: 12px;
+                image: none;
+                width: 0;
+                height: 0;
+                border-left: 5px solid transparent;
+                border-right: 5px solid transparent;
+                border-top: 6px solid {COLORS["text_muted"]};
+                margin-right: 8px;
             }}
             QComboBox QAbstractItemView {{
                 background-color: {COLORS["bg_primary"]};
@@ -171,6 +177,11 @@ class SettingsDialog(QDialog):
         self.base_url_input.setPlaceholderText("留空使用默认地址")
         self.base_url_input.setMinimumHeight(36)
         api_layout.addRow("API 地址:", self.base_url_input)
+
+        base_url_hint = QLabel("※ 如果地址失效，请前往官网查看最新 API 地址及文档")
+        base_url_hint.setProperty("subheading", True)
+        base_url_hint.setStyleSheet(f"color: {COLORS['text_muted']}; font-size: 11px;")
+        api_layout.addRow("", base_url_hint)
 
         # 提示信息
         self.hint_label = QLabel("")

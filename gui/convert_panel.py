@@ -70,7 +70,6 @@ class PlatformSelector(QFrame):
                 padding: 8px 12px;
                 background-color: {COLORS["bg_input"]};
                 color: {COLORS["text_primary"]};
-                min-width: 140px;
             }}
             QComboBox:focus {{
                 border-color: {COLORS["border_focus"]};
@@ -148,7 +147,7 @@ class ConvertPanel(QWidget):
 
         # 中间：转换箭头按钮（交换功能）
         swap_btn = QPushButton("⇄")
-        swap_btn.setFixedSize(36, 36)
+        swap_btn.setFixedSize(38, 38)
         swap_btn.setToolTip("交换源和目标平台")
         swap_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         swap_btn.setStyleSheet(f"""
